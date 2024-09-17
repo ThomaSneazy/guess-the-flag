@@ -65,14 +65,14 @@ function createParticleSystem() {
     const data = imageData.data;
 
     const geometry = new THREE.BufferGeometry();
-    const particles = 100000;
+    const particles = 50000;
     const positions = new Float32Array(particles * 3);
     const colors = new Float32Array(particles * 3);
 
     for (let i = 0; i < particles; i++) {
       const x = (Math.random() - 0.5) * 2.8;
-      const y = (Math.random() - 0.5) * 2;
-      const z = (Math.random() - 0.5) * 0.05;
+      const y = (Math.random() - 0.3) * 2;
+      const z = (Math.random() - 0.5) * 0.15;
 
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
@@ -91,31 +91,47 @@ function createParticleSystem() {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.025, // Augmenté de 0.015 à 0.025
+      size: 0.03, // Augmenté de 0.025 à 0.04
       map: particleTexture,
       vertexColors: true,
       sizeAttenuation: true, 
       transparent: true,
       alphaTest: 0.5,
-      blending: THREE.AdditiveBlending, // Ajout du blending additif
-      depthWrite: false, // Désactivation de l'écriture de profondeur
+      blending: THREE.NormalBlending, // Changé de AdditiveBlending à NormalBlending
+      depthWrite: false,
     });
 
     if (particleSystem) {
       const oldPositions = particleSystem.geometry.attributes.position.array;
       const oldColors = particleSystem.geometry.attributes.color.array;
 
+      // Explosion des particules
       gsap.to(oldPositions, {
-        duration: 1,
-        ease: "power2.inOut",
-        ...positions,
+        duration: 0.7,
+        ease: "power2.out",
         onUpdate: () => {
+          for (let i = 0; i < oldPositions.length; i += 3) {
+            oldPositions[i] *= 1.2;
+            oldPositions[i + 1] *= 1.2;
+            oldPositions[i + 2] *= 2;
+          }
           particleSystem.geometry.attributes.position.needsUpdate = true;
+        },
+        onComplete: () => {
+          // Transition plus lente vers le nouveau drapeau
+          gsap.to(oldPositions, {
+            duration: 3, // Augmenté de 1.3 à 2 secondes
+            ease: "power2.inOut", // Changé pour une courbe d'animation plus douce
+            ...positions,
+            onUpdate: () => {
+              particleSystem.geometry.attributes.position.needsUpdate = true;
+            }
+          });
         }
       });
 
       gsap.to(oldColors, {
-        duration: 1,
+        duration: 2.7, // Durée totale ajustée (0.7 + 2)
         ease: "power2.inOut",
         ...colors,
         onUpdate: () => {
@@ -134,8 +150,8 @@ function createParticleSystem() {
 
 function createCircleTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 128; // Augmenté de 64 à 128
-  canvas.height = 128; // Augmenté de 64 à 128
+  canvas.width = 128;
+  canvas.height = 128;
   const ctx = canvas.getContext('2d');
   
   const centerX = canvas.width / 2;
@@ -144,7 +160,7 @@ function createCircleTexture() {
   
   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.5)');
+  gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.4)'); // Modifié pour une transition plus douce
   gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
   
   ctx.beginPath();
@@ -183,8 +199,8 @@ function onMouseMove(event) {
   if (intersects.length > 0) {
     const positions = particleSystem.geometry.attributes.position.array;
     const intersection = intersects[0];
-    const repelStrength = 1.5;
-    const repelRadius = 1;
+    const repelStrength = 1;
+    const repelRadius = 1.2;
 
     for (let i = 0; i < positions.length; i += 3) {
       const dx = positions[i] - intersection.point.x;

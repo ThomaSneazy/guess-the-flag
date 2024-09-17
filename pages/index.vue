@@ -1,27 +1,35 @@
 <template>
   <div class="container">
     <Background3D />
+    <div class="hint-container" :class="{ 'show': showHint }">
+      <p>{{ currentCountry.hint }}</p>
+    </div>
     <FlagDisplay 
-      v-if="currentCountry.code" 
+      v-if="currentCountry.code && !gameOver" 
       :countryCode="currentCountry.code" 
       :animate="flagAnimation"
     />
     <div class="content">
       <h1>GUESS THE FLAG</h1>
-      <div class="buttons">
-        <GuessInput @guess="checkGuess" />
-        <button @click="toggleHint" class="hint-button">Indice</button>
-      </div>
+      <GuessInput 
+        v-if="currentCountry.name && !gameOver"
+        :correctCountry="currentCountry.name"
+        :countries="countries"
+        :globalHintCount="globalHintCount"
+        @guess="checkGuess"
+        @showHint="toggleHint"
+        @gameOver="handleGameOver"
+        @updateHintCount="updateGlobalHintCount"
+      />
       <p v-if="message">{{ message }}</p>
-    </div>
-    <div v-if="showHint" class="hint-container">
-      <p>{{ currentCountry.hint }}</p>
+      <p v-if="gameOver" class="score">Bravo ! Ton score est de {{ score }} pays deviné{{ score > 1 ? 's' : '' }} d'affilée.</p>
+      <button v-if="gameOver" @click="restartGame" class="restart-button">Recommencer</button>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted } from 'vue'
 import FlagDisplay from '~/components/FlagDisplay.vue'
 import GuessInput from '~/components/GuessInput.vue'
 import Background3D from '~/components/Background3D.vue'
@@ -32,6 +40,9 @@ const currentCountry = ref({})
 const message = ref('')
 const flagAnimation = ref('none')
 const showHint = ref(false)
+const gameOver = ref(false)
+const score = ref(0)
+const globalHintCount = ref(3)
 
 const loadCountries = async () => {
   console.log('Chargement des pays...')
@@ -58,40 +69,49 @@ const loadCountries = async () => {
 
 const selectRandomCountry = () => {
   if (countries.value.length > 0) {
-    if (currentCountry.value.code) {
-      flagAnimation.value = 'out'
-      setTimeout(() => {
-        currentCountry.value = countries.value[Math.floor(Math.random() * countries.value.length)]
-        console.log('Pays sélectionné :', currentCountry.value.name)
-        flagAnimation.value = 'in'
-      }, 0) // Augmenté à 1000ms pour laisser plus de temps à l'animation de sortie
-    } else {
+    showHint.value = false // Cacher l'indice à chaque transition
+    flagAnimation.value = 'out'
+    setTimeout(() => {
       currentCountry.value = countries.value[Math.floor(Math.random() * countries.value.length)]
-      console.log('Premier pays sélectionné :', currentCountry.value.name)
+      console.log('Pays sélectionné :', currentCountry.value.name)
       flagAnimation.value = 'in'
-    }
+    }, 500) // Ajustez ce délai selon vos besoins
   } else {
     console.warn('Aucun pays disponible pour la sélection')
   }
 }
 
 const checkGuess = (guess) => {
-  console.log('Tentative de deviner :', guess)
-  if (guess.toLowerCase() === currentCountry.value.name) {
-    message.value = 'Correct ! Bien joué !'
-    console.log('Réponse correcte')
+  if (guess.toLowerCase() === currentCountry.value.name.toLowerCase()) {
+    // message.value = 'Correct ! Bien joué !'
+    score.value++
     setTimeout(() => {
-      message.value = ''
+      // message.value = ''
       selectRandomCountry()
-    }, 10)
-  } else {
-    message.value = 'Incorrect. Essayez encore !'
-    console.log('Réponse incorrecte')
+    }, 500)
   }
+}
+
+const handleGameOver = (finalScore) => {
+  gameOver.value = true
+  score.value = finalScore
+  message.value = 'Game Over ! Vous avez fait deux erreurs consécutives.'
+}
+
+const restartGame = () => {
+  gameOver.value = false
+  message.value = ''
+  score.value = 0
+  globalHintCount.value = 3 // Réinitialisation des HINT
+  selectRandomCountry()
 }
 
 const toggleHint = () => {
   showHint.value = !showHint.value
+}
+
+const updateGlobalHintCount = (newCount) => {
+  globalHintCount.value = newCount
 }
 
 onMounted(() => {
@@ -108,50 +128,78 @@ onMounted(() => {
   overflow: visible;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  align-items: center;
+  justify-content: center;
 }
 
 .content {
-  margin: 0 auto;
+  width: 100%;
   max-width: 70rem;
   position: relative;
   padding: 1rem;
   z-index: 3;
-  margin-top: 80vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: end;
+  height: 90vh;
 }
 
-.buttons {
+.input-container {
   display: flex;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1rem;
+  width: 100%;
 }
 
-.hint-button {
+/* .input{
+  color: red;
+  border: none;
+  border-radius: 10rem;
+} */
+
+/* .hint-button {
   padding: 0.5rem 1rem;
   background-color: #4CAF50;
   color: white;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-}
+} */
 
 .hint-container {
-  position: fixed;
-  right: 0;
-  top: 0;
-  width: 50vw;
-  height: 100%;
+  position: absolute;
+  left: 1rem;
+  top: 1rem;
+  width: 300px;
   background-color: rgba(0, 0, 0, 0.8);
   color: white;
-  padding: 2rem;
-  box-sizing: border-box;
-  overflow-y: auto;
-  transition: transform 0.3s ease-in-out;
-  transform: translateX(100%);
+  padding: 1rem;
+  border-radius: 4px;
+  opacity: 0;
+  transition: opacity 0.3s ease-in-out;
 }
 
 .hint-container.show {
-  transform: translateX(0);
+  opacity: 1;
+}
+
+.restart-button {
+  margin-top: 1rem;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  background-color: #3498db;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  height: 3rem;
+}
+
+.score {
+  font-size: 1.2rem;
+  font-weight: bold;
+  margin-top: 1rem;
 }
 </style>
 

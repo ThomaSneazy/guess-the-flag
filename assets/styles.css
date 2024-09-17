@@ -2,7 +2,7 @@ body {
   margin: 0;
   padding: 0;
   font-family: Arial, sans-serif;
-  color: #333;
+  color: #ffffff;
   overflow-x: hidden;
 }
 
@@ -31,6 +31,16 @@ input {
   max-height: 2rem;
   font-size: 1rem;
   margin-right: 0.5rem;
+  background-color: transparent;
+  /* box-shadow: none; */
+  border: none;
+  border-bottom: 1px solid #ffffff;
+  color: white;
+  text-transform: uppercase;
+}
+
+input:focus {
+  outline: none;
 }
 
 button {
@@ -41,6 +51,7 @@ button {
   padding: 1rem 1rem;
   font-size: 1rem;
   min-height: 2rem;
+  border-radius: 0.5rem;
   background-color: #000000;
   color: white;
   border: none;
