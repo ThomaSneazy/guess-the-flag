@@ -75,7 +75,7 @@ const selectRandomCountry = () => {
       currentCountry.value = countries.value[Math.floor(Math.random() * countries.value.length)]
       console.log('Pays sélectionné :', currentCountry.value.name)
       flagAnimation.value = 'in'
-    }, 500) // Ajustez ce délai selon vos besoins
+    }, 0) // Ajustez ce délai selon vos besoins
   } else {
     console.warn('Aucun pays disponible pour la sélection')
   }
@@ -88,7 +88,7 @@ const checkGuess = (guess) => {
     setTimeout(() => {
       // message.value = ''
       selectRandomCountry()
-    }, 500)
+    }, 0)
   }
 }
 

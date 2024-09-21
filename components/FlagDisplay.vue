@@ -1,9 +1,18 @@
 <template>
-  <div ref="container" class="flag-display"></div>
+  <div>
+    <div ref="container" class="flag-display"></div>
+    <div class="controls">
+      <div v-for="(control, key) in controls" :key="key" class="control-item">
+        <label>{{ control.label }}</label>
+        <input :type="control.type" v-model="control.value" @input="updateControl(key)">
+        <span>{{ control.value }}</span>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue';
+import { ref, onMounted, onUnmounted, watch, reactive } from 'vue';
 import * as THREE from 'three';
 import { gsap } from 'gsap';
 
@@ -17,6 +26,14 @@ const props = defineProps({
 const container = ref(null);
 let scene, camera, renderer, particleSystem, raycaster, mouse;
 let originalPositions, targetPositions;
+
+const controls = reactive({
+  particleSize: { label: 'Taille des particules', type: 'range', value: 0.03, min: 0.01, max: 0.1, step: 0.01 },
+  particleCount: { label: 'Nombre de particules', type: 'range', value: 80000, min: 10000, max: 200000, step: 10000 },
+  repelStrength: { label: 'Force de répulsion', type: 'range', value: 4, min: 1, max: 10, step: 0.1 },
+  repelRadius: { label: 'Rayon de répulsion', type: 'range', value: 1, min: 0.1, max: 2, step: 0.1 },
+  transitionDuration: { label: 'Durée de transition', type: 'range', value: 3, min: 0.5, max: 5, step: 0.1 },
+});
 
 onMounted(() => {
   initScene();
@@ -37,7 +54,7 @@ watch(() => props.countryCode, updateFlagTexture);
 
 function initScene() {
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   container.value.appendChild(renderer.domElement);
@@ -65,21 +82,21 @@ function createParticleSystem() {
     const data = imageData.data;
 
     const geometry = new THREE.BufferGeometry();
-    const particles = 50000;
+    const particles = controls.particleCount.value;
     const positions = new Float32Array(particles * 3);
     const colors = new Float32Array(particles * 3);
 
     for (let i = 0; i < particles; i++) {
       const x = (Math.random() - 0.5) * 2.8;
-      const y = (Math.random() - 0.3) * 2;
+      const y = (Math.random() - 0.5) * 1.6;
       const z = (Math.random() - 0.5) * 0.15;
 
       positions[i * 3] = x;
       positions[i * 3 + 1] = y;
       positions[i * 3 + 2] = z;
 
-      const pixelX = Math.floor((x + 1.5) / 3 * canvas.width);
-      const pixelY = Math.floor((1 - (y + 1) / 2) * canvas.height);
+      const pixelX = Math.floor((x + 1.4) / 2.8 * canvas.width);
+      const pixelY = Math.floor((1 - (y + 0.8) / 1.6) * canvas.height);
       const pixelIndex = (pixelY * canvas.width + pixelX) * 4;
 
       colors[i * 3] = data[pixelIndex] / 255;
@@ -91,13 +108,13 @@ function createParticleSystem() {
     geometry.setAttribute('color', new THREE.BufferAttribute(colors, 3));
 
     const material = new THREE.PointsMaterial({
-      size: 0.03, // Augmenté de 0.025 à 0.04
+      size: controls.particleSize.value,
       map: particleTexture,
       vertexColors: true,
       sizeAttenuation: true, 
       transparent: true,
       alphaTest: 0.5,
-      blending: THREE.NormalBlending, // Changé de AdditiveBlending à NormalBlending
+      blending: THREE.NormalBlending,
       depthWrite: false,
     });
 
@@ -105,7 +122,6 @@ function createParticleSystem() {
       const oldPositions = particleSystem.geometry.attributes.position.array;
       const oldColors = particleSystem.geometry.attributes.color.array;
 
-      // Explosion des particules
       gsap.to(oldPositions, {
         duration: 0.7,
         ease: "power2.out",
@@ -118,10 +134,9 @@ function createParticleSystem() {
           particleSystem.geometry.attributes.position.needsUpdate = true;
         },
         onComplete: () => {
-          // Transition plus lente vers le nouveau drapeau
           gsap.to(oldPositions, {
-            duration: 3, // Augmenté de 1.3 à 2 secondes
-            ease: "power2.inOut", // Changé pour une courbe d'animation plus douce
+            duration: controls.transitionDuration.value,
+            ease: "power2.inOut",
             ...positions,
             onUpdate: () => {
               particleSystem.geometry.attributes.position.needsUpdate = true;
@@ -131,8 +146,8 @@ function createParticleSystem() {
       });
 
       gsap.to(oldColors, {
-        duration: 2.7, // Durée totale ajustée (0.7 + 2)
-        ease: "power2.inOut",
+        duration: controls.transitionDuration.value,
+        ease: "power3.inOut",
         ...colors,
         onUpdate: () => {
           particleSystem.geometry.attributes.color.needsUpdate = true;
@@ -150,8 +165,8 @@ function createParticleSystem() {
 
 function createCircleTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 128;
-  canvas.height = 128;
+  canvas.width = 164;
+  canvas.height = 164;
   const ctx = canvas.getContext('2d');
   
   const centerX = canvas.width / 2;
@@ -160,7 +175,7 @@ function createCircleTexture() {
   
   const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, radius);
   gradient.addColorStop(0, 'rgba(255, 255, 255, 1)');
-  gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.4)'); // Modifié pour une transition plus douce
+  gradient.addColorStop(0.7, 'rgba(255, 255, 255, 0.4)');
   gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
   
   ctx.beginPath();
@@ -199,8 +214,8 @@ function onMouseMove(event) {
   if (intersects.length > 0) {
     const positions = particleSystem.geometry.attributes.position.array;
     const intersection = intersects[0];
-    const repelStrength = 1;
-    const repelRadius = 1.2;
+    const repelStrength = controls.repelStrength.value;
+    const repelRadius = controls.repelRadius.value;
 
     for (let i = 0; i < positions.length; i += 3) {
       const dx = positions[i] - intersection.point.x;
@@ -227,6 +242,19 @@ function onWindowResize() {
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
+
+function updateControl(key) {
+  switch(key) {
+    case 'particleSize':
+      if (particleSystem) {
+        particleSystem.material.size = controls[key].value;
+      }
+      break;
+    case 'particleCount':
+      createParticleSystem();
+      break;
+  }
+}
 </script>
 
 <style scoped>
@@ -237,6 +265,30 @@ function onWindowResize() {
   top: 0;
   left: 0;
   z-index: 2;
+}
+
+.controls {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background-color: rgba(0, 0, 0, 0.7);
+  color: white;
+  padding: 10px;
+  border-radius: 5px;
+  z-index: 3;
+}
+
+.control-item {
+  margin-bottom: 10px;
+}
+
+.control-item label {
+  display: block;
+  margin-bottom: 5px;
+}
+
+.control-item input {
+  width: 100%;
 }
 </style>
 
