@@ -2,11 +2,11 @@
   <div>
     <div ref="container" class="flag-display"></div>
     <div class="controls">
-      <div v-for="(control, key) in controls" :key="key" class="control-item">
+      <!-- <div v-for="(control, key) in controls" :key="key" class="control-item">
         <label>{{ control.label }}</label>
         <input :type="control.type" v-model="control.value" @input="updateControl(key)">
         <span>{{ control.value }}</span>
-      </div>
+      </div> -->
     </div>
   </div>
 </template>
@@ -54,7 +54,7 @@ watch(() => props.countryCode, updateFlagTexture);
 
 function initScene() {
   scene = new THREE.Scene();
-  camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
   renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   container.value.appendChild(renderer.domElement);
@@ -165,8 +165,8 @@ function createParticleSystem() {
 
 function createCircleTexture() {
   const canvas = document.createElement('canvas');
-  canvas.width = 164;
-  canvas.height = 164;
+  canvas.width = 256;
+  canvas.height = 256;
   const ctx = canvas.getContext('2d');
   
   const centerX = canvas.width / 2;
